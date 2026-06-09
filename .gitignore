@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.onnx
+data/digit_cnn.pt
+
+# Config local
+config.json
+
+# Temp / build artifacts
+F:/SC_temp/
+
+# Web
+web/.next/
+web/node_modules/
+web/.env.local
+web/private/
+
+# OS
+.DS_Store
+Thumbs.db

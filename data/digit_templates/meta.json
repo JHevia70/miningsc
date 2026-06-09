@@ -1,0 +1,50 @@
+{
+  "6": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_054.png",
+    "ord": 54
+  },
+  "5": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_053.png",
+    "ord": 53
+  },
+  "4": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_052.png",
+    "ord": 52
+  },
+  "2": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_050.png",
+    "ord": 50
+  },
+  "3": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_051.png",
+    "ord": 51
+  },
+  "9": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_057.png",
+    "ord": 57
+  },
+  "0": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_048.png",
+    "ord": 48
+  },
+  ".": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_046.png",
+    "ord": 46
+  },
+  "8": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_056.png",
+    "ord": 56
+  },
+  "%": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_037.png",
+    "ord": 37
+  },
+  "7": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_055.png",
+    "ord": 55
+  },
+  "1": {
+    "file": "H:\\Projects\\SC\\data\\digit_templates\\char_049.png",
+    "ord": 49
+  }
+}
