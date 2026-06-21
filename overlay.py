@@ -34,6 +34,7 @@ from src.config import load as load_cfg, save as save_cfg
 from src.config_window import ConfigWindow
 from src.uploader import upload_scan
 from src.pricer import ensure_loaded, compute_value
+from src.updater import check_async as check_update
 
 
 def _register_bundled_fonts():
@@ -191,6 +192,9 @@ class MiningOverlay:
         start_log_reader()
         ensure_loaded()
         warmup()
+        self._update_tag = None
+        self._tray = None
+        check_update(self._on_update_available)
         self.root.after(500, self._poll_ready)
         self._draw_idle()
         self.root.after(200, self._apply_clickthrough)
@@ -386,8 +390,21 @@ class MiningOverlay:
             self._build_simple("MiningSC Scanner", "Iniciando...")
             self.root.after(500, self._poll_ready)
 
+    def _on_update_available(self, tag: str):
+        self._update_tag = tag
+        self.root.after(0, self._draw_idle)
+        tray = getattr(self, "_tray", None)
+        if tray:
+            tray.title = f"MiningSC Scanner — actualización {tag} disponible"
+
     def _draw_idle(self):
-        self._build_simple("MiningSC Scanner", "F9 escanear  |  F10 ocultar")
+        if self._update_tag:
+            self._build_simple(
+                "MiningSC Scanner",
+                f"Nueva versión disponible: {self._update_tag}\nminingsc.vercel.app/scanner",
+            )
+        else:
+            self._build_simple("MiningSC Scanner", "F9 escanear  |  F10 ocultar")
 
     def _draw_results(self):
         if not self._lines:
@@ -546,6 +563,7 @@ class TrayApp:
             pystray.MenuItem("Salir", self._tray_exit),
         )
         self.tray = pystray.Icon("MiningSC", icon_img, "MiningSC Scanner", menu)
+        self.overlay._tray = self.tray
 
     def _tray_toggle(self, icon=None, item=None):
         if self.overlay._visible:

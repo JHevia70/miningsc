@@ -3,7 +3,7 @@
 ; Output: F:\SC_temp\installer\MiningScanner_Setup.exe
 
 #define AppName      "MiningSC Scanner"
-#define AppVersion   "1.0.0"
+#define AppVersion   "1.0.4"
 #define AppPublisher "MiningSC"
 #define AppURL       "https://miningsc.vercel.app"
 #define AppExeName   "MiningScanner.exe"

@@ -19,24 +19,23 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from . import config as cfg_mod
+
 
 # ---------------------------------------------------------------------------
 # Log location
 # ---------------------------------------------------------------------------
 
-_LOG_CANDIDATES = [
-    Path(r"C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\Game.log"),
-    Path(r"D:\Program Files\Roberts Space Industries\StarCitizen\LIVE\Game.log"),
-    Path(r"E:\Program Files\Roberts Space Industries\StarCitizen\LIVE\Game.log"),
-    Path(r"G:\Roberts Space Industries\StarCitizen\StarCitizen\LIVE\Game.log"),
-]
-
-
 def _find_log() -> Optional[Path]:
-    for p in _LOG_CANDIDATES:
-        if p.exists():
-            return p
-    return None
+    game_path = cfg_mod.load().get("game_path", "").strip()
+    if not game_path:
+        print("[log_reader] ERROR: carpeta de Star Citizen no configurada. Ve a Configuración y establece la ruta.")
+        return None
+    p = Path(game_path) / "Game.log"
+    if not p.exists():
+        print(f"[log_reader] ERROR: Game.log no encontrado en: {p}")
+        return None
+    return p
 
 
 # ---------------------------------------------------------------------------

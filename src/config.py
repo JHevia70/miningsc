@@ -10,8 +10,8 @@ DEFAULTS = {
     "font_size":  11,        # pts
     "font_name":  "Electrolize",
     "temp_dir":   "",        # "" = system temp
+    "game_path":  "",        # ruta a la carpeta LIVE de Star Citizen
     "player_id":  "",        # UUID generado al primer arranque
-    "upload":     True,      # enviar scans a la BD
 }
 
 def _exe_dir() -> Path:

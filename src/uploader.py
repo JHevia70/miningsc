@@ -43,8 +43,6 @@ def upload_scan(lines, location: dict, cfg: dict):
     location : dict with keys: system, body, station, altitude_m, coord_x, coord_y, raw
     cfg      : current config dict
     """
-    if not cfg.get("upload", True):
-        return
     threading.Thread(
         target=_do_upload,
         args=(lines, location, cfg),

@@ -78,11 +78,28 @@ class ConfigWindow:
         size_spin.grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
-        # --- Upload toggle ---
-        ttk.Label(f, text="Enviar scans a la BD").grid(row=row, column=0, sticky="w", pady=4)
-        upload_var = tk.BooleanVar(value=cfg.get("upload", True))
-        ttk.Checkbutton(f, variable=upload_var).grid(row=row, column=1, sticky="w", padx=8)
-        row += 1
+        # --- Game path ---
+        ttk.Label(f, text="Carpeta de Star Citizen").grid(row=row, column=0, sticky="w", pady=4)
+        gamepath_var = tk.StringVar(value=cfg.get("game_path", ""))
+        gamepath_entry = tk.Entry(f, textvariable=gamepath_var, width=28,
+                                  bg="#1a2e45", fg="#e0e0e0", insertbackground="#e0e0e0",
+                                  relief="flat")
+        gamepath_entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
+
+        def _browse_game():
+            folder = filedialog.askdirectory(
+                title="Seleccionar carpeta de Star Citizen",
+                initialdir=gamepath_var.get() or None,
+                parent=win,
+            )
+            if folder:
+                gamepath_var.set(folder)
+
+        ttk.Button(f, text="…", width=3, command=_browse_game).grid(row=row, column=2, padx=4)
+        ttk.Label(f, text='Ej: G:\\Roberts Space Industries\\StarCitizen\\StarCitizen\\LIVE',
+                  foreground="#888888",
+                  font=("Electrolize", 8)).grid(row=row+1, column=1, sticky="w", padx=8)
+        row += 2
 
         # --- Temp folder ---
         ttk.Label(f, text="Carpeta temporal").grid(row=row, column=0, sticky="w", pady=4)
@@ -92,7 +109,7 @@ class ConfigWindow:
                                  relief="flat")
         tempdir_entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
 
-        def _browse():
+        def _browse_temp():
             folder = filedialog.askdirectory(
                 title="Seleccionar carpeta temporal",
                 initialdir=tempdir_var.get() or None,
@@ -101,7 +118,7 @@ class ConfigWindow:
             if folder:
                 tempdir_var.set(folder)
 
-        ttk.Button(f, text="…", width=3, command=_browse).grid(row=row, column=2, padx=4)
+        ttk.Button(f, text="…", width=3, command=_browse_temp).grid(row=row, column=2, padx=4)
         ttk.Label(f, text='Vacío = temp del sistema', foreground="#888888",
                   font=("Electrolize", 8)).grid(row=row+1, column=1, sticky="w", padx=8)
         row += 2
@@ -120,8 +137,8 @@ class ConfigWindow:
             new_cfg["text_align"]     = align_var.get()
             new_cfg["alpha"]          = round(alpha_var.get(), 2)
             new_cfg["font_size"]      = size_var.get()
+            new_cfg["game_path"]      = gamepath_var.get().strip()
             new_cfg["temp_dir"]       = tempdir_var.get().strip()
-            new_cfg["upload"]     = upload_var.get()
             cfg_mod.save(new_cfg)
             self._on_apply(new_cfg)
 
