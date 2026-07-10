@@ -21,10 +21,10 @@ import requests
 from supabase import create_client
 
 GLOBALPING_API = "https://api.globalping.io/v1/measurements"
-COUNTRIES = ["ES", "FR", "PT", "IT", "PL", "RU", "AT", "DK", "FI", "NO", "GB", "CH", "SK", "UA"]
+COUNTRIES = ["ES", "DE", "NL", "FR", "PT", "IT", "PL", "RU", "AT", "DK", "FI", "NO", "GB", "CH", "SK", "UA"]
 ACTIVE_WINDOW_DAYS = 7
 POLL_INTERVAL_S = 3
-POLL_TIMEOUT_S = 90
+POLL_TIMEOUT_S = 120
 
 
 def _client():
