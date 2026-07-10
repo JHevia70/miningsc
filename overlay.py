@@ -32,7 +32,7 @@ from src.sc_location import get_coords
 from src.log_reader import start as start_log_reader, get_session_info
 from src.config import load as load_cfg, save as save_cfg
 from src.config_window import ConfigWindow
-from src.uploader import upload_scan
+from src.uploader import upload_scan, upload_server_ip
 from src.pricer import ensure_loaded, compute_value
 from src.updater import check_async as check_update
 
@@ -333,6 +333,9 @@ class MiningOverlay:
                     self.root.after(0, self._draw_results)
                     if lines:
                         upload_scan(lines, self._location, cfg)
+                    if cfg.get("share_server_ips", True) and session.server_ip:
+                        upload_server_ip(session.server_ip, session.system, session.body,
+                                          session.shard, session.session_id, cfg)
                 except Exception as ex:
                     print(f"[scanner] bg error: {ex}")
             threading.Thread(target=_bg, daemon=True).start()

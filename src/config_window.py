@@ -123,6 +123,13 @@ class ConfigWindow:
                   font=("Electrolize", 8)).grid(row=row+1, column=1, sticky="w", padx=8)
         row += 2
 
+        # --- Share server IPs for network monitoring ---
+        share_ip_var = tk.BooleanVar(value=cfg.get("share_server_ips", True))
+        ttk.Checkbutton(f, text="Compartir IP de servidor para medir latencia de red",
+                        variable=share_ip_var).grid(row=row, column=0, columnspan=2,
+                                                     sticky="w", pady=4)
+        row += 1
+
         # --- Separator ---
         ttk.Separator(f, orient="horizontal").grid(row=row, column=0, columnspan=3,
                                                     sticky="ew", pady=10)
@@ -139,6 +146,7 @@ class ConfigWindow:
             new_cfg["font_size"]      = size_var.get()
             new_cfg["game_path"]      = gamepath_var.get().strip()
             new_cfg["temp_dir"]       = tempdir_var.get().strip()
+            new_cfg["share_server_ips"] = share_ip_var.get()
             cfg_mod.save(new_cfg)
             self._on_apply(new_cfg)
 

@@ -12,6 +12,7 @@ DEFAULTS = {
     "temp_dir":   "",        # "" = system temp
     "game_path":  "",        # ruta a la carpeta LIVE de Star Citizen
     "player_id":  "",        # UUID generado al primer arranque
+    "share_server_ips": True,  # compartir IP de servidor de juego para medir latencia de red
 }
 
 def _exe_dir() -> Path:

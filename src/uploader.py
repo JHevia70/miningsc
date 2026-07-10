@@ -97,6 +97,46 @@ def _do_upload(lines, location: dict, cfg: dict):
         print(f"[uploader] {e}")
 
 
+def upload_server_ip(server_ip, system, body, shard, session_id, cfg: dict):
+    """
+    Upload/refresh a known game server IP in a background thread.
+
+    server_ip : IP string captured from Game.log remoteAddr, or None
+    """
+    if not server_ip:
+        return
+    threading.Thread(
+        target=_do_upload_server_ip,
+        args=(server_ip, system, body, shard, session_id, cfg),
+        daemon=True,
+    ).start()
+
+
+def _do_upload_server_ip(server_ip, system, body, shard, session_id, cfg: dict):
+    try:
+        sb = _get_client()
+        player_id = _ensure_player(cfg)
+
+        system_id = _resolve_id(sb, "systems", "name", system)
+        body_id   = _resolve_id(sb, "bodies",  "name", body)
+
+        sb.table("game_server_ips").upsert({
+            "ip":             server_ip,
+            "system_id":      system_id,
+            "body_id":        body_id,
+            "shard":          shard,
+            "session_id":     session_id,
+            "contributed_by": player_id,
+            "last_seen":      datetime.now(timezone.utc).isoformat(),
+        }, on_conflict="ip").execute()
+
+        print(f"[uploader] server ip uploaded: {server_ip}")
+
+    except Exception as e:
+        # Silent failure — overlay must never crash due to upload errors
+        print(f"[uploader] {e}")
+
+
 def _resolve_id(sb, table: str, col: str, value) -> int | None:
     if not value:
         return None

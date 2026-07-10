@@ -7,6 +7,7 @@ Parsed data:
   - node_id      : server node UUID (available after Channel Connection Complete)
   - body         : active celestial body (from OOC_<System>_<N>_<Body> lines during map load)
   - system       : star system name
+  - server_ip    : game server remoteAddr IP (from Channel Created lines) — stable for the life of the shard
 
 The log is read once on init (tail of last N lines) then monitored via thread.
 All state is updated in-place; callers read get_session_info() at any time.
@@ -75,6 +76,7 @@ class SessionInfo:
     node_id:        Optional[str] = None   # server node UUID
     system:         Optional[str] = None   # "Stanton" | "Pyro" | ...
     body:           Optional[str] = None   # "Hurston" | "microTech" | ...
+    server_ip:      Optional[str] = None   # game server remoteAddr, IP only (no port)
 
 
 _state  = SessionInfo()
@@ -132,6 +134,7 @@ def _process_line(line: str):
             node = m.group(2)
             if node != "00000000-0000-0000-0000-000000000000":
                 _state.node_id = node
+            _state.server_ip = m.group(3).split(":")[0]
             return
 
         # Channel Disconnected from real server — clear session
@@ -139,6 +142,7 @@ def _process_line(line: str):
         if m:
             _state.session_id = None
             _state.node_id    = None
+            _state.server_ip  = None
             return
 
         # OOC body name during map load
@@ -209,4 +213,5 @@ def get_session_info() -> SessionInfo:
             node_id    = _state.node_id,
             system     = _state.system,
             body       = _state.body,
+            server_ip  = _state.server_ip,
         )
