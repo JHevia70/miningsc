@@ -77,12 +77,21 @@ def _poll_measurement(msm_id: str) -> dict:
 
 
 def _last_reachable_hop(hops: list) -> dict | None:
-    """Return the last hop with 0% loss and real timings — the closest
-    reachable point before the server's firewall drops everything."""
+    """Return the DEEPEST hop that received at least one reply, i.e. the
+    closest point in the route to the server that any country's trace
+    reached — not just the last hop with a *clean* (0% loss) reading.
+
+    Different routes/probes hit intermittent loss at different depths, so
+    requiring 0% loss made countries stop at wildly different hop indexes
+    (e.g. ES at hop 2 vs DE at hop 7), making their RTTs incomparable —
+    a shallow, lucky hop for one country could read "faster" than a much
+    deeper, genuinely closer hop for another. Depth (how far into the
+    route we got) matters more than a single lossy probe at that hop.
+    """
     best = None
     for i, hop in enumerate(hops):
         stats = hop.get("stats") or {}
-        if stats.get("loss") == 0 and stats.get("avg") is not None:
+        if stats.get("avg") is not None and (stats.get("rcv") or 0) > 0:
             best = (i, hop, stats)
     if best is None:
         return None
