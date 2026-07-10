@@ -22,6 +22,10 @@ from supabase import create_client
 
 GLOBALPING_API = "https://api.globalping.io/v1/measurements"
 COUNTRIES = ["ES", "DE", "NL", "FR", "PT", "IT", "PL", "RU", "AT", "DK", "FI", "NO", "GB", "CH", "SK", "UA"]
+# Extra probes per country to work around flaky/unprivileged individual probes
+# (e.g. some Spanish datacenter probes lack raw-ICMP permissions and fail the
+# whole hop). Countries not listed here default to 1 probe.
+PROBE_LIMIT_OVERRIDES = {"ES": 3}
 ACTIVE_WINDOW_DAYS = 7
 POLL_INTERVAL_S = 3
 POLL_TIMEOUT_S = 120
@@ -50,7 +54,9 @@ def _create_measurement(ip: str) -> str:
         "target": ip,
         "type": "mtr",
         "measurementOptions": {"protocol": "TCP", "port": 443},
-        "locations": [{"country": c, "limit": 1} for c in COUNTRIES],
+        "locations": [
+            {"country": c, "limit": PROBE_LIMIT_OVERRIDES.get(c, 1)} for c in COUNTRIES
+        ],
     }
     r = requests.post(GLOBALPING_API, json=body, timeout=15)
     r.raise_for_status()
@@ -91,26 +97,37 @@ def _last_reachable_hop(hops: list) -> dict | None:
 
 
 def _rows_for_result(server_ip_id: int, measurement: dict) -> list[dict]:
-    rows = []
     measured_at = datetime.now(timezone.utc).isoformat()
+    best_by_country: dict[str, dict] = {}
+
     for entry in measurement.get("results", []):
         probe = entry.get("probe", {})
+        country = probe.get("country")
         result = entry.get("result", {})
         hops = result.get("hops") or []
         hop = _last_reachable_hop(hops)
         if hop is None:
-            print(f"  [{probe.get('country')}] no reachable hop")
+            print(f"  [{country}] probe had no reachable hop")
             continue
-        rows.append({
+        row = {
             "server_ip_id":  server_ip_id,
-            "probe_country": probe.get("country"),
+            "probe_country": country,
             "probe_city":    probe.get("city"),
             "measured_at":   measured_at,
             **hop,
-        })
-        print(f"  [{probe.get('country')}] hop#{hop['hop_index']} "
-              f"{hop['hop_address']} avg={hop['rtt_avg_ms']}ms loss={hop['packet_loss_pct']}%")
-    return rows
+        }
+        # With multiple probes per country (see PROBE_LIMIT_OVERRIDES), keep
+        # only the fastest reachable one so each country contributes exactly
+        # one row per measurement round.
+        current_best = best_by_country.get(country)
+        if current_best is None or (row["rtt_avg_ms"] or float("inf")) < (current_best["rtt_avg_ms"] or float("inf")):
+            best_by_country[country] = row
+
+    for country, row in best_by_country.items():
+        print(f"  [{country}] hop#{row['hop_index']} "
+              f"{row['hop_address']} avg={row['rtt_avg_ms']}ms loss={row['packet_loss_pct']}%")
+
+    return list(best_by_country.values())
 
 
 def main() -> int:
