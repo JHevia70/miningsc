@@ -29,6 +29,7 @@ PROBE_LIMIT_OVERRIDES = {"ES": 3}
 ACTIVE_WINDOW_DAYS = 7
 POLL_INTERVAL_S = 3
 POLL_TIMEOUT_S = 120
+MAX_ATTEMPTS = 3
 
 
 def _client():
@@ -49,13 +50,13 @@ def _active_ips(sb):
     return res.data or []
 
 
-def _create_measurement(ip: str) -> str:
+def _create_measurement(ip: str, countries: list[str]) -> str:
     body = {
         "target": ip,
         "type": "mtr",
         "measurementOptions": {"protocol": "TCP", "port": 443},
         "locations": [
-            {"country": c, "limit": PROBE_LIMIT_OVERRIDES.get(c, 1)} for c in COUNTRIES
+            {"country": c, "limit": PROBE_LIMIT_OVERRIDES.get(c, 1)} for c in countries
         ],
     }
     r = requests.post(GLOBALPING_API, json=body, timeout=15)
@@ -96,8 +97,7 @@ def _last_reachable_hop(hops: list) -> dict | None:
     }
 
 
-def _rows_for_result(server_ip_id: int, measurement: dict) -> list[dict]:
-    measured_at = datetime.now(timezone.utc).isoformat()
+def _rows_by_country(server_ip_id: int, measurement: dict, measured_at: str) -> dict[str, dict]:
     best_by_country: dict[str, dict] = {}
 
     for entry in measurement.get("results", []):
@@ -107,7 +107,6 @@ def _rows_for_result(server_ip_id: int, measurement: dict) -> list[dict]:
         hops = result.get("hops") or []
         hop = _last_reachable_hop(hops)
         if hop is None:
-            print(f"  [{country}] probe had no reachable hop")
             continue
         row = {
             "server_ip_id":  server_ip_id,
@@ -123,11 +122,68 @@ def _rows_for_result(server_ip_id: int, measurement: dict) -> list[dict]:
         if current_best is None or (row["rtt_avg_ms"] or float("inf")) < (current_best["rtt_avg_ms"] or float("inf")):
             best_by_country[country] = row
 
-    for country, row in best_by_country.items():
+    return best_by_country
+
+
+def _measure_countries(ip: str, countries: list[str], server_ip_id: int, measured_at: str) -> dict[str, dict]:
+    msm_id = _create_measurement(ip, countries)
+    measurement = _poll_measurement(msm_id)
+    return _rows_by_country(server_ip_id, measurement, measured_at)
+
+
+def _last_known_row(sb, server_ip_id: int, country: str, measured_at: str) -> dict | None:
+    """Fall back to the most recent successful measurement for this
+    country/server, re-stamped at the current round, so the chart line
+    has no gap when a country fails all retry attempts."""
+    res = (
+        sb.table("ping_results")
+        .select("probe_country, probe_city, hop_index, hop_address, rtt_min_ms, rtt_avg_ms, rtt_max_ms, packet_loss_pct")
+        .eq("server_ip_id", server_ip_id)
+        .eq("probe_country", country)
+        .order("measured_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not res.data:
+        return None
+    row = dict(res.data[0])
+    row["server_ip_id"] = server_ip_id
+    row["measured_at"] = measured_at
+    return row
+
+
+def _measure_ip_with_retries(sb, ip: str, server_ip_id: int) -> list[dict]:
+    measured_at = datetime.now(timezone.utc).isoformat()
+    results: dict[str, dict] = {}
+    pending = list(COUNTRIES)
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        if not pending:
+            break
+        print(f"[network_runner] {ip} — attempt {attempt}/{MAX_ATTEMPTS} for {pending}")
+        try:
+            found = _measure_countries(ip, pending, server_ip_id, measured_at)
+        except Exception as e:
+            print(f"[network_runner] {ip} — attempt {attempt} error: {e}")
+            found = {}
+        results.update(found)
+        pending = [c for c in pending if c not in results]
+        if pending:
+            print(f"[network_runner] {ip} — still missing: {pending}")
+
+    for country in pending:
+        fallback = _last_known_row(sb, server_ip_id, country, measured_at)
+        if fallback:
+            results[country] = fallback
+            print(f"  [{country}] no fresh data after {MAX_ATTEMPTS} attempts — reused last known value")
+        else:
+            print(f"  [{country}] no fresh data and no prior history — skipped")
+
+    for country, row in results.items():
         print(f"  [{country}] hop#{row['hop_index']} "
               f"{row['hop_address']} avg={row['rtt_avg_ms']}ms loss={row['packet_loss_pct']}%")
 
-    return list(best_by_country.values())
+    return list(results.values())
 
 
 def main() -> int:
@@ -148,10 +204,7 @@ def main() -> int:
     for server in servers:
         ip = server["ip"]
         try:
-            print(f"[network_runner] {ip} — creating measurement")
-            msm_id = _create_measurement(ip)
-            measurement = _poll_measurement(msm_id)
-            rows = _rows_for_result(server["id"], measurement)
+            rows = _measure_ip_with_retries(sb, ip, server["id"])
             if rows:
                 sb.table("ping_results").insert(rows).execute()
                 print(f"[network_runner] {ip} — inserted {len(rows)} row(s)")
